@@ -18,34 +18,32 @@ Test cases for Product Model
 Test cases can be run with:
     nosetests
     coverage report -m
-
-While debugging just these tests it's convenient to use this:
-    nosetests --stop tests/test_models.py:TestProductModel
-
 """
+
 import os
 import logging
 import unittest
 from decimal import Decimal
+
 from service.models import Product, Category, db
 from service import app
 from tests.factories import ProductFactory
 
 DATABASE_URI = os.getenv(
-    "DATABASE_URI", "postgresql://postgres:postgres@localhost:5432/postgres"
+    "DATABASE_URI",
+    "postgresql://postgres:postgres@localhost:5432/postgres",
 )
 
 
 ######################################################################
-#  P R O D U C T   M O D E L   T E S T   C A S E S
+# PRODUCT MODEL TEST CASES
 ######################################################################
-# pylint: disable=too-many-public-methods
 class TestProductModel(unittest.TestCase):
     """Test Cases for Product Model"""
 
     @classmethod
     def setUpClass(cls):
-        """This runs once before the entire test suite"""
+        """Run once before the entire test suite."""
         app.config["TESTING"] = True
         app.config["DEBUG"] = False
         app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URI
@@ -54,46 +52,54 @@ class TestProductModel(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        """This runs once after the entire test suite"""
+        """Run once after the entire test suite."""
         db.session.close()
 
     def setUp(self):
-        """This runs before each test"""
-        db.session.query(Product).delete()  # clean up the last tests
+        """Run before each test."""
+        db.session.query(Product).delete()
         db.session.commit()
 
     def tearDown(self):
-        """This runs after each test"""
+        """Run after each test."""
         db.session.remove()
 
-    ######################################################################
-    #  T E S T   C A S E S
-    ######################################################################
+    ##################################################################
+    # CREATE TESTS
+    ##################################################################
 
     def test_create_a_product(self):
-        """It should Create a product and assert that it exists"""
-        product = Product(name="Fedora", description="A red hat", price=12.50, available=True, category=Category.CLOTHS)
+        """It should create a product."""
+        product = Product(
+            name="Fedora",
+            description="A red hat",
+            price=12.50,
+            available=True,
+            category=Category.CLOTHS,
+        )
+
         self.assertEqual(str(product), "<Product Fedora id=[None]>")
-        self.assertTrue(product is not None)
-        self.assertEqual(product.id, None)
+        self.assertIsNotNone(product)
+        self.assertIsNone(product.id)
         self.assertEqual(product.name, "Fedora")
         self.assertEqual(product.description, "A red hat")
-        self.assertEqual(product.available, True)
+        self.assertTrue(product.available)
         self.assertEqual(product.price, 12.50)
         self.assertEqual(product.category, Category.CLOTHS)
 
     def test_add_a_product(self):
-        """It should Create a product and add it to the database"""
-        products = Product.all()
-        self.assertEqual(products, [])
+        """It should create a product and add it to the database."""
+        self.assertEqual(Product.all(), [])
+
         product = ProductFactory()
         product.id = None
         product.create()
-        # Assert that it was assigned an id and shows up in the database
+
         self.assertIsNotNone(product.id)
+
         products = Product.all()
         self.assertEqual(len(products), 1)
-        # Check that it matches the original product
+
         new_product = products[0]
         self.assertEqual(new_product.name, product.name)
         self.assertEqual(new_product.description, product.description)
@@ -101,6 +107,132 @@ class TestProductModel(unittest.TestCase):
         self.assertEqual(new_product.available, product.available)
         self.assertEqual(new_product.category, product.category)
 
-    #
-    # ADD YOUR TEST CASES HERE
-    #
+    ##################################################################
+    # READ TEST
+    ##################################################################
+
+    def test_read_a_product(self):
+        """It should read a product by its ID."""
+        product = ProductFactory()
+        product.id = None
+        product.create()
+
+        found = Product.find(product.id)
+
+        self.assertIsNotNone(found)
+        self.assertEqual(found.id, product.id)
+        self.assertEqual(found.name, product.name)
+
+    ##################################################################
+    # UPDATE TEST
+    ##################################################################
+
+    def test_update_a_product(self):
+        """It should update an existing product."""
+        product = ProductFactory()
+        product.id = None
+        product.create()
+
+        product.name = "Updated Product"
+        product.description = "Updated description"
+        product.update()
+
+        found = Product.find(product.id)
+
+        self.assertIsNotNone(found)
+        self.assertEqual(found.name, "Updated Product")
+        self.assertEqual(found.description, "Updated description")
+
+    ##################################################################
+    # DELETE TEST
+    ##################################################################
+
+    def test_delete_a_product(self):
+        """It should delete a product."""
+        product = ProductFactory()
+        product.id = None
+        product.create()
+        product_id = product.id
+
+        product.delete()
+
+        self.assertIsNone(Product.find(product_id))
+        self.assertEqual(Product.all(), [])
+
+    ##################################################################
+    # LIST ALL TEST
+    ##################################################################
+
+    def test_list_all_products(self):
+        """It should list all products."""
+        first = ProductFactory()
+        first.id = None
+        first.create()
+
+        second = ProductFactory()
+        second.id = None
+        second.create()
+
+        products = Product.all()
+
+        self.assertEqual(len(products), 2)
+
+    ##################################################################
+    # FIND BY NAME TEST
+    ##################################################################
+
+    def test_find_by_name(self):
+        """It should find products by name."""
+        product = Product(
+            name="Hammer",
+            description="Claw hammer",
+            price=34.95,
+            available=True,
+            category=Category.TOOLS,
+        )
+        product.create()
+
+        found = Product.find_by_name("Hammer").all()
+
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].name, "Hammer")
+
+    ##################################################################
+    # FIND BY CATEGORY TEST
+    ##################################################################
+
+    def test_find_by_category(self):
+        """It should find products by category."""
+        product = Product(
+            name="Hammer",
+            description="Claw hammer",
+            price=34.95,
+            available=True,
+            category=Category.TOOLS,
+        )
+        product.create()
+
+        found = Product.find_by_category(Category.TOOLS).all()
+
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].category, Category.TOOLS)
+
+    ##################################################################
+    # FIND BY AVAILABILITY TEST
+    ##################################################################
+
+    def test_find_by_availability(self):
+        """It should find products by availability."""
+        product = Product(
+            name="Unavailable Product",
+            description="Not available",
+            price=10.00,
+            available=False,
+            category=Category.TOOLS,
+        )
+        product.create()
+
+        found = Product.find_by_availability(False).all()
+
+        self.assertEqual(len(found), 1)
+        self.assertFalse(found[0].available)

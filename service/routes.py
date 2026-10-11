@@ -1,4 +1,3 @@
-
 ######################################################################
 # Copyright 2016, 2022 John J. Rofrano. All Rights Reserved.
 #
@@ -7,6 +6,7 @@
 # You may obtain a copy of the License at
 #
 # https://www.apache.org/licenses/LICENSE-2.0
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,40 +14,29 @@
 # limitations under the License.
 ######################################################################
 
-# spell: ignore Rofrano jsonify restx dbname
-"""
-Product Store Service with UI
-"""
+"""Product Store Service with UI."""
 
-from flask import jsonify, request, abort, url_for
-from service.models import Product
+from flask import abort, jsonify, request, url_for
+
 from service.common import status
+from service.models import Category, Product
 from . import app
 
 
-######################################################################
-# H E A L T H   C H E C K
-######################################################################
 @app.route("/health")
 def healthcheck():
-    """Let them know our heart is still beating"""
+    """Let them know our heart is still beating."""
     return jsonify(status=200, message="OK"), status.HTTP_200_OK
 
 
-######################################################################
-# H O M E   P A G E
-######################################################################
 @app.route("/")
 def index():
-    """Base URL for our service"""
+    """Base URL for our service."""
     return app.send_static_file("index.html")
 
 
-######################################################################
-#  U T I L I T Y   F U N C T I O N S
-######################################################################
 def check_content_type(content_type):
-    """Checks that the media type is correct"""
+    """Checks that the media type is correct."""
     if request.headers.get("Content-Type") != content_type:
         app.logger.error("Invalid or missing Content-Type.")
         abort(
@@ -56,9 +45,6 @@ def check_content_type(content_type):
         )
 
 
-######################################################################
-# C R E A T E   A   N E W   P R O D U C T
-######################################################################
 @app.route("/products", methods=["POST"])
 def create_products():
     """Creates a Product."""
@@ -73,7 +59,6 @@ def create_products():
     product.create()
 
     app.logger.info("Product with new id [%s] saved!", product.id)
-
     location_url = url_for(
         "get_product", product_id=product.id, _external=True
     )
@@ -84,21 +69,45 @@ def create_products():
     )
 
 
-######################################################################
-# L I S T   A L L   P R O D U C T S
-######################################################################
 @app.route("/products", methods=["GET"])
 def list_products():
-    """Returns a list of all products."""
-    app.logger.info("Request to List all Products...")
+    """Returns a list of products, optionally filtered."""
+    app.logger.info("Request to List Products...")
     products = Product.all()
-    results = [product.serialize() for product in products]
-    return jsonify(results), status.HTTP_200_OK
+
+    name = request.args.get("name")
+    category = request.args.get("category")
+    available = request.args.get("available")
+
+    if name:
+        products = Product.find_by_name(name)
+
+    if category:
+        try:
+            category_value = Category[category.upper()]
+        except KeyError:
+            abort(
+                status.HTTP_400_BAD_REQUEST,
+                f"Invalid category: {category}",
+            )
+        products = Product.find_by_category(category_value)
+
+    if available is not None:
+        if available.lower() not in ["true", "false"]:
+            abort(
+                status.HTTP_400_BAD_REQUEST,
+                f"Invalid availability: {available}",
+            )
+        products = Product.find_by_availability(
+            available.lower() == "true"
+        )
+
+    return (
+        jsonify([product.serialize() for product in products]),
+        status.HTTP_200_OK,
+    )
 
 
-######################################################################
-# R E A D   A   P R O D U C T
-######################################################################
 @app.route("/products/<int:product_id>", methods=["GET"])
 def get_product(product_id):
     """Reads a product by its ID."""
@@ -114,9 +123,6 @@ def get_product(product_id):
     return jsonify(product.serialize()), status.HTTP_200_OK
 
 
-######################################################################
-# U P D A T E   A   P R O D U C T
-######################################################################
 @app.route("/products/<int:product_id>", methods=["PUT"])
 def update_product(product_id):
     """Updates an existing product."""
@@ -137,9 +143,6 @@ def update_product(product_id):
     return jsonify(product.serialize()), status.HTTP_200_OK
 
 
-######################################################################
-# D E L E T E   A   P R O D U C T
-######################################################################
 @app.route("/products/<int:product_id>", methods=["DELETE"])
 def delete_product(product_id):
     """Deletes a product by its ID."""

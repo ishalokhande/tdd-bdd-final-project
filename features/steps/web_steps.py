@@ -1,4 +1,3 @@
-
 ######################################################################
 # Copyright 2016, 2021 John J. Rofrano. All Rights Reserved.
 #
@@ -7,6 +6,7 @@
 # You may obtain a copy of the License at
 #
 # https://www.apache.org/licenses/LICENSE-2.0
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -52,6 +52,17 @@ def step_impl(context, text_string):
     assert text_string not in element.text
 
 
+@then('I should see "{text_string}"')
+def step_impl(context, text_string):
+    """Check that specific text appears on the page."""
+    element = WebDriverWait(context.driver, context.wait_seconds).until(
+        expected_conditions.visibility_of_element_located(
+            (By.TAG_NAME, "body")
+        )
+    )
+    assert text_string in element.text
+
+
 @when('I set the "{element_name}" to "{text_string}"')
 def step_impl(context, element_name, text_string):
     """Set a text field."""
@@ -59,6 +70,15 @@ def step_impl(context, element_name, text_string):
     element = context.driver.find_element(By.ID, element_id)
     element.clear()
     element.send_keys(text_string)
+
+
+@when('I set the product ID for "{product_name}"')
+def step_impl(context, product_name):
+    """Set the ID of a product created by the data loader."""
+    product_id = context.product_ids[product_name]
+    element = context.driver.find_element(By.ID, "product_id")
+    element.clear()
+    element.send_keys(str(product_id))
 
 
 @when('I select "{text}" in the "{element_name}" dropdown')
@@ -94,7 +114,9 @@ def step_impl(context, element_name):
     """Copy a field value into the simulated clipboard."""
     element_id = ID_PREFIX + element_name.lower().replace(" ", "_")
     element = WebDriverWait(context.driver, context.wait_seconds).until(
-        expected_conditions.presence_of_element_located((By.ID, element_id))
+        expected_conditions.presence_of_element_located(
+            (By.ID, element_id)
+        )
     )
     context.clipboard = element.get_attribute("value")
     logging.info("Clipboard contains: %s", context.clipboard)
@@ -105,7 +127,9 @@ def step_impl(context, element_name):
     """Paste the simulated clipboard value into a field."""
     element_id = ID_PREFIX + element_name.lower().replace(" ", "_")
     element = WebDriverWait(context.driver, context.wait_seconds).until(
-        expected_conditions.presence_of_element_located((By.ID, element_id))
+        expected_conditions.presence_of_element_located(
+            (By.ID, element_id)
+        )
     )
     element.clear()
     element.send_keys(context.clipboard)
@@ -120,7 +144,9 @@ def step_impl(context, button_name):
     """Click a button using its ID."""
     button_id = button_name.lower() + "-btn"
     button = WebDriverWait(context.driver, context.wait_seconds).until(
-        expected_conditions.element_to_be_clickable((By.ID, button_id))
+        expected_conditions.element_to_be_clickable(
+            (By.ID, button_id)
+        )
     )
     button.click()
 
@@ -150,7 +176,8 @@ def step_impl(context, text_string, element_name):
     element_id = ID_PREFIX + element_name.lower().replace(" ", "_")
     found = WebDriverWait(context.driver, context.wait_seconds).until(
         expected_conditions.text_to_be_present_in_element_value(
-            (By.ID, element_id), text_string
+            (By.ID, element_id),
+            text_string,
         )
     )
     assert found
@@ -161,7 +188,9 @@ def step_impl(context, element_name, text_string):
     """Change a field value."""
     element_id = ID_PREFIX + element_name.lower().replace(" ", "_")
     element = WebDriverWait(context.driver, context.wait_seconds).until(
-        expected_conditions.presence_of_element_located((By.ID, element_id))
+        expected_conditions.presence_of_element_located(
+            (By.ID, element_id)
+        )
     )
     element.clear()
     element.send_keys(text_string)
